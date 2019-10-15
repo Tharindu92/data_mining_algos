@@ -32,7 +32,7 @@ class MyDecisionTreeRegressor():
         '''
 
         self.root = self.split_node(X,y,1)
-        pass
+        return self.root
 
     def predict(self, X):
         '''
@@ -40,6 +40,7 @@ class MyDecisionTreeRegressor():
         :return: y_pred: Predicted label, type: numpy array, shape: (N,)
         '''
         predicts = []
+
         for x in X:
             predicts.append(self.predict_record(x))
         return predicts

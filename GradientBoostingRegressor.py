@@ -31,6 +31,7 @@ class MyGradientBoostingRegressor():
         self.estimators = np.empty((self.n_estimators,), dtype=np.object)
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
+        self.meanY = 0
 
     def fit(self, X, y):
         '''
@@ -40,14 +41,50 @@ class MyGradientBoostingRegressor():
 
         You should update the self.estimators in this function
         '''
-        pass
+        return self.gradient_bost(X, y)
+
 
     def predict(self, X):
         '''
         :param X: Feature data, type: numpy array, shape: (N, num_feature)
         :return: y_pred: Predicted label, type: numpy array, shape: (N,)
         '''
-        pass
+        PY = []
+        for i in range(len(X)):
+            PY.append(self.meanY)
+        for estimator in self.estimators:
+            PR = estimator.predict(X)
+            for i in range(len(PR)):
+                PY[i] = PY[i] + self.learning_rate * PR[i]
+        return PY
+
+    # def predict_record(self, X):
+        # for estimator in n_estimators:
+        #     estimator.
+
+    def gradient_bost(self, X, Y):
+        RY = []
+        meanY = sum(Y) / len(Y)
+        self.meanY = meanY
+        PY = []
+        for i in Y:
+            RY.append(i - meanY)
+            PY.append(meanY)
+        for i in range(self.n_estimators):
+            tree = MyDecisionTreeRegressor(max_depth=self.max_depth, min_samples_split=self.min_samples_split)
+            tree.fit(X, RY)
+            self.estimators[i] = tree
+            RY, PY = self.calculate_residual(X,PY, Y, tree)
+
+        return self.estimators
+    def calculate_residual(self, X, PY, Y, tree):
+        PR = tree.predict(X)
+        for i in range(len(PY)):
+            PY[i] = PY[i] + self.learning_rate * PR[i]
+        RY = []
+        for i in range(len(PY)):
+            RY.append(Y[i] - PY[i])
+        return RY, PY
 
     def get_model_dict(self):
         model_dict = dict()
@@ -84,6 +121,7 @@ if __name__=='__main__':
             y_test_pred = np.genfromtxt("Test_data" + os.sep + "y_pred_gradient_boosting_"  + str(i) + "_" + str(j) + ".csv", delimiter=",")
 
             if compare_json_dic(model_dict, test_model_dict) * compare_predict_output(y_pred, y_test_pred) == 1:
+            # if compare_json_dic(model_dict, test_model_dict) == 1:
                 print("True")
             else:
                 print("False")
