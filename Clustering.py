@@ -4,60 +4,61 @@ import os
 DATATYPE = np.float32
 
 class MyCluster():
-	'''
-	The cluster object used in clustering.
-	Just use the properties and methods.
-	You can also change anything if you need.
-	-------
-	Properties:
-	items: list
-		list of the id of items in the cluster
-		E.g. the items are stored in the list '_items', then [1, 2, 4] reprents the cluster of _items[1], _items[2], and _items[4]
-	size: int
-		number of current items in the cluster
-	used: bool
-		If True, the cluster remains; if False, the cluster has already been merged into another cluster
-	-------
-	Methods:
-	append(self, item):
-		Add a single item into the cluster. Input is the id of the item.
-	extend(self, items):
-		Add a list of items into the cluster. Input is a list of ids of the items.
-	release(self):
-		Release the cluster when it is merged into another cluster.
-	'''
-	def __init__(self):
-		self._items = []
-		self._used = True
+    '''
+    The cluster object used in clustering.
+    Just use the properties and methods.
+    You can also change anything if you need.
+    -------
+    Properties:
+    items: list
+        list of the id of items in the cluster
+        E.g. the items are stored in the list '_items', then [1, 2, 4] reprents the cluster of _items[1], _items[2], and _items[4]
+    size: int
+        number of current items in the cluster
+    used: bool
+        If True, the cluster remains; if False, the cluster has already been merged into another cluster
+    -------
+    Methods:
+    append(self, item):
+        Add a single item into the cluster. Input is the id of the item.
+    extend(self, items):
+        Add a list of items into the cluster. Input is a list of ids of the items.
+    release(self):
+        Release the cluster when it is merged into another cluster.
+    '''
 
-	@property
-	def size(self):
-		return len(self._items)
+    def __init__(self):
+        self._items = []
+        self._used = True
 
-	@property
-	def used(self):
-		return self._used
+    @property
+    def size(self):
+        return len(self._items)
 
-	@property
-	def items(self):
-		return self._items
+    @property
+    def used(self):
+        return self._used
 
-	def append(self, item):
-		self._items.extend([item])
-	
-	def extend(self, items):
-		self._items.extend(items)
-		
-	def release(self):
-		self._used = False
-		self._items = []
+    @property
+    def items(self):
+        return self._items
+
+    def append(self, item):
+        self._items.extend([item])
+
+    def extend(self, items):
+        self._items.extend(items)
+
+    def release(self):
+        self._used = False
+        self._items = []
 
 
 def euclidean_distance(p, q):
-	'''
-	Method to calculate euclidean distance between two points.
-	'''
-	return np.sqrt(np.sum((p - q)**2))
+    '''
+    Method to calculate euclidean distance between two points.
+    '''
+    return np.sqrt(np.sum((p - q) ** 2))
 
 
 def single_linkage(points, clusters, p, q):
@@ -76,7 +77,19 @@ def single_linkage(points, clusters, p, q):
 	-------
 	Returns: a float, the proximity of single linkage between clusters[p] and clusters[q]
 	'''
-	pass
+	if not clusters[p].used or not clusters[q].used:
+		return 0
+
+	pointsP = points[clusters[p].items]
+	pointsQ = points[clusters[q].items]
+	min = 1000000000
+	for pointP in pointsP:
+		for pointQ in pointsQ:
+			distance = euclidean_distance(pointP, pointQ)
+			if distance < min:
+				min = distance
+	return min
+
 
 
 def complete_linkage(points, clusters, p, q):
@@ -95,7 +108,19 @@ def complete_linkage(points, clusters, p, q):
 	-------
 	Returns: a float, the proximity of complete linkage between clusters[p] and clusters[q]
 	'''
-	pass
+	
+	if not clusters[p].used or not clusters[q].used:
+		return 0
+
+	pointsP = points[clusters[p].items]
+	pointsQ = points[clusters[q].items]
+	max = -100000000000000
+	for pPoint in pointsP:
+		for qPoint in pointsQ:
+			distance = euclidean_distance(pPoint, qPoint)
+			if distance > max:
+				max = distance
+	return max
 
 
 class MyAgglomerativeClustering():
@@ -129,13 +154,14 @@ class MyAgglomerativeClustering():
 		to map _linkage to _linkage_func
 	-------
 	Methods:
-	
+
 	'''
+
 	def __init__(self, n_clusters=1, linkage='single'):
 		'''
-		Construction
-		You don't need to change this method.
-		'''
+        Construction
+        You don't need to change this method.
+        '''
 		self._n_clusters = n_clusters
 		self._n_items = None
 		self._items = None
@@ -147,12 +173,11 @@ class MyAgglomerativeClustering():
 						   'complete': complete_linkage}
 		self._linkage_func = linkage_choices[self._linkage]
 
-
 	def init_cluster(self, inputs):
 		'''
-		Initialization
-		You don't need to change this method.
-		'''
+        Initialization
+        You don't need to change this method.
+        '''
 		list = []
 		self._n_items = len(inputs)
 		for i, item in enumerate(inputs):
@@ -163,7 +188,6 @@ class MyAgglomerativeClustering():
 		self._proximity_matrix = np.zeros((2 * self._n_items, 2 * self._n_items), dtype=DATATYPE)
 		return inputs, list
 
-	
 	def find_clusters_to_merge(self):
 		'''
 		TO DO
@@ -177,7 +201,26 @@ class MyAgglomerativeClustering():
 		p, q: int, int
 			the id of two clusters that should be merged
 		'''
-		pass
+		index_read = []
+		index_to_read = []
+		for i in self._history:
+			for j in i:
+				index_read.append(j)
+		for i in range(len(self._proximity_matrix)):
+			if i not in index_read:
+				index_to_read.append(i)
+
+		pq = self._proximity_matrix[:, index_to_read]
+		pq = pq[index_to_read, :]
+		min_distance = np.min(pq[np.nonzero(pq)])
+		p, q = np.where(self._proximity_matrix == min_distance)
+		if len(p) > 0:
+			for pq in zip(p, q):
+				if np.any(self._history == pq[0]) or np.any(self._history == pq[1]):
+					continue
+				p, q = pq
+				break
+		return p, q
 
 
 	def merge_cluster(self, p, q):
@@ -194,7 +237,15 @@ class MyAgglomerativeClustering():
 		Returns: int
 			the id of the new cluster by merging p and q.
 		'''
-		pass
+		cluster = MyCluster()
+		clusterP = self._clusters[p]
+		clusterQ = self._clusters[q]
+		cluster.extend(clusterP.items)
+		cluster.extend(clusterQ.items)
+		clusterP.release()
+		clusterQ.release()
+		self._clusters.append(cluster)
+		return len(self._clusters) - 1
 
 
 	def update_proximity(self, new_cluster):
@@ -210,7 +261,11 @@ class MyAgglomerativeClustering():
 		Returns:
 			None
 		'''
-		pass
+
+		cluster_points = self._clusters[new_cluster]._items
+		for i in range(len(self._clusters) - 1):
+			if i not in cluster_points:
+				self._proximity_matrix[i, new_cluster] = self._linkage_func(self._items, self._clusters, new_cluster, i)
 
 
 	def fit(self, X):
@@ -237,12 +292,11 @@ class MyAgglomerativeClustering():
 			# merge the two closest clusters
 			p, q = self.find_clusters_to_merge()
 			new_cluster = self.merge_cluster(p, q)
+
 			# update the proximity matrix
 			self.update_proximity(new_cluster)
-
 			# record the merged pair
 			self._history.extend([[p, q]])
-
 		return self._history
 
 
@@ -261,18 +315,19 @@ def compare_solution(history, filename):
 
 	return True
 
+
 # Test
-if __name__=='__main__':
-	for i in range(1):
-		testdata = np.genfromtxt("Test_data" + os.sep + "clustering_" + str(i) +".csv", delimiter=',', dtype=DATATYPE)
-		
-		single_linkage_clustering = MyAgglomerativeClustering(n_clusters=1, linkage='single')
-		complete_linkage_clustering = MyAgglomerativeClustering(n_clusters=1, linkage='complete')
-		
-		history_single = single_linkage_clustering.fit(testdata)
-		file_single_answer = "Test_data" + os.sep + "clustering_single_" + str(i) +".csv"
+if __name__ == '__main__':
+    for i in range(1):
+        testdata = np.genfromtxt("Test_data" + os.sep + "clustering_" + str(i) + ".csv", delimiter=',', dtype=DATATYPE)
+        single_linkage_clustering = MyAgglomerativeClustering(n_clusters=1, linkage='single')
+        complete_linkage_clustering = MyAgglomerativeClustering(n_clusters=1, linkage='complete')
 
-		history_complete = complete_linkage_clustering.fit(testdata)
-		file_complete_answer = "Test_data" + os.sep + "clustering_complete_" + str(i) +".csv"
+        history_single = single_linkage_clustering.fit(testdata)
+        file_single_answer = "Test_data" + os.sep + "clustering_single_" + str(i) + ".csv"
 
-		print(compare_solution(history_single, file_single_answer), compare_solution(history_complete, file_complete_answer))
+        history_complete = complete_linkage_clustering.fit(testdata)
+        file_complete_answer = "Test_data" + os.sep + "clustering_complete_" + str(i) + ".csv"
+
+        print(compare_solution(history_single, file_single_answer),
+              compare_solution(history_complete, file_complete_answer))
